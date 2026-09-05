@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Model / Feedback — False Positive Reduction Assistant</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+  {% include "_nav.html" %}
+
+  <div class="container">
+    <div class="page-header">
+      <h1>Model / Feedback</h1>
+      <p>Analyst decisions (Accept / Reject / Override) accumulate as feedback. Retraining is controlled — nothing retrains automatically on every click.</p>
+    </div>
+
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="section-title">🧠 Current Model</div>
+        <div class="info-grid">
+          <div class="info-item"><div class="label">Active Version</div><div class="value">v{{ config.model_version }}</div></div>
+          {% if metrics %}
+          <div class="info-item"><div class="label">Trained At</div><div class="value">{{ metrics.trained_at }}</div></div>
+          <div class="info-item"><div class="label">ROC-AUC</div><div class="value">{{ metrics.classification.roc_auc_true_incident }}</div></div>
+          <div class="info-item"><div class="label">Missed-Incident Rate</div><div class="value">{{ metrics.safety_metrics.missed_incident_rate_pct }}%</div></div>
+          <div class="info-item"><div class="label">Analyst Hours Saved (test)</div><div class="value">{{ metrics.baseline_vs_assistant.analyst_hours_saved }} h</div></div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">📝 Accumulated Analyst Feedback</div>
+        <div class="info-grid">
+          <div class="info-item"><div class="label">Total Feedback Events</div><div class="value">{{ feedback_stats.total_feedback }}</div></div>
+          <div class="info-item"><div class="label">Unused Labeled Feedback</div><div class="value">{{ feedback_stats.unused_labeled_feedback }}</div></div>
+          <div class="info-item"><div class="label">Used in Retraining</div><div class="value">{{ feedback_stats.used_in_retrain }}</div></div>
+        </div>
+        <p style="color:var(--text-secondary);font-size:0.82rem;margin-top:10px;">
+          Feedback with a derivable binary label comes from Accepted recommendations and Overrides to
+          "Likely False Positive" / "Likely True Incident". Overrides to "Novel / Human Investigation" don't
+          contribute a binary label and are excluded from retraining.
+        </p>
+        <div class="action-group" style="margin-top:16px;">
+          <button class="btn btn-primary btn-sm" onclick="prepareRetrain()">📦 Prepare Retraining Dataset</button>
+          <button class="btn btn-override btn-sm" onclick="retrainModel()">🔄 Retrain Model</button>
+        </div>
+        <div id="retrain-status" style="margin-top:12px;color:var(--text-secondary);font-size:0.85rem;"></div>
+      </div>
+    </div>
+
+    <div class="section-title" style="margin-top:30px;">Model Version History &amp; Rollback</div>
+    <div class="card">
+      {% if model_versions %}
+      <table>
+        <thead><tr><th>Version</th><th>Description</th><th>Reviewer</th><th>Status</th><th>Created</th><th>Action</th></tr></thead>
+        <tbody>
+          {% for v in model_versions %}
+          <tr>
+            <td>v{{ v.version }}</td>
+            <td>{{ v.description }}</td>
+            <td>{{ v.reviewer }}</td>
+            <td>
+              {% if v.status == 'active' %}<span class="badge green"><span class="badge-dot"></span>active</span>
+              {% elif v.status == 'rolled_back' %}<span class="badge gray"><span class="badge-dot"></span>rolled back</span>
+              {% else %}<span class="badge gray"><span class="badge-dot"></span>inactive</span>{% endif %}
+            </td>
+            <td style="font-size:0.78rem;">{{ v.created_at }}</td>
+            <td>
+              {% if v.status != 'active' %}
+              <button class="btn btn-rollback btn-sm" onclick="rollbackModelVersion('{{ v.version }}')">Rollback to this</button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty-state">No version history yet.</p>
+      {% endif %}
+    </div>
+
+    <div class="footer-note">False Positive Reduction Assistant · Rollback restores the archived model file; audit history is never deleted</div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+  <script>
+    async function prepareRetrain() {
+      const statusEl = document.getElementById("retrain-status");
+      statusEl.textContent = "Preparing retraining dataset...";
+      try {
+        const res = await fetch("/model/prepare-retrain", { method: "POST" });
+        const data = await res.json();
+        if (!res.ok) { statusEl.textContent = data.error || "Failed to prepare dataset."; return; }
+        statusEl.textContent = data.message || `Prepared ${data.prepared_rows} row(s) for retraining.`;
+      } catch (err) { statusEl.textContent = "Network error."; }
+    }
+
+    async function retrainModel() {
+      if (!confirm("Retrain the model now using the prepared feedback dataset (if any)? This creates a new model version.")) return;
+      const statusEl = document.getElementById("retrain-status");
+      statusEl.textContent = "Retraining model — this may take a moment...";
+      try {
+        const res = await fetch("/model/retrain", { method: "POST" });
+        const data = await res.json();
+        if (!res.ok) { statusEl.textContent = data.error || "Retraining failed."; return; }
+        statusEl.textContent = `Retrained as v${data.new_model_version} using ${data.feedback_rows_used} feedback row(s). ` +
+          `Missed-incident rate: ${data.metrics_summary.missed_incident_rate_pct}%, hours saved: ${data.metrics_summary.hours_saved}h.`;
+        setTimeout(() => location.reload(), 2500);
+      } catch (err) { statusEl.textContent = "Network error during retraining."; }
+    }
+
+    async function rollbackModelVersion(version) {
+      if (!confirm(`Roll back the active model to v${version}?`)) return;
+      const reason = (window.prompt("Rollback reason (required):", "") || "").trim();
+      if (!reason) { alert("A rollback reason is required."); return; }
+      try {
+        const res = await fetch("/model/rollback", {
+          method: "POST", headers: authHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify({ version, confirm: true, reason }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          forgetAuthTokenIfUnauthorized(res.status);
+          alert(data.error || "Rollback failed.");
+          return;
+        }
+        location.reload();
+      } catch (err) { alert("Network error during rollback."); }
+    }
+  </script>
+</body>
+</html>

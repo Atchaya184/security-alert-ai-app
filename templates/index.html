@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>False Positive Reduction Assistant — Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+  {% include "_nav.html" %}
+
+  <div class="container">
+    <div class="page-header">
+      <h1>Alert Triage Dashboard</h1>
+      <p>Enter a security alert to get an AI recommendation — Likely False Positive, Likely True Incident, or Novel/Unknown requiring human investigation. The AI recommends; you decide.</p>
+    </div>
+
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="section-title">🛰️ Manual Alert Input</div>
+        <div class="flash-error" id="form-error"></div>
+        <form id="alert-form">
+          <div class="form-row">
+            <div>
+              <label>Alert ID</label>
+              <input type="text" name="alert_id" placeholder="A00001" />
+            </div>
+            <div>
+              <label>Alert Type</label>
+              <input type="text" name="alert_type" placeholder="Multiple Failed Logins" required />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <label>Timestamp</label>
+              <input type="datetime-local" name="timestamp" />
+            </div>
+            <div>
+              <label>Severity (informational — not used to decide fake/real)</label>
+              <select name="severity">
+                <option value="Low">Low</option>
+                <option value="Medium" selected>Medium</option>
+                <option value="High">High</option>
+                <option value="Critical">Critical</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <label>Source IP</label>
+              <input type="text" name="source_ip" placeholder="10.0.0.5" />
+            </div>
+            <div>
+              <label>Destination IP</label>
+              <input type="text" name="destination_ip" placeholder="10.0.0.20" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <label>Location / Country</label>
+              <input type="text" name="country" placeholder="United States" />
+            </div>
+            <div>
+              <label>Device / Endpoint ID</label>
+              <input type="text" name="device" placeholder="PC-0165" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <label>Alert Source (disconnected tool)</label>
+              <select name="alert_source">
+                <option>EDR</option>
+                <option>IAM</option>
+                <option>Email Security</option>
+                <option>Firewall</option>
+                <option>SIEM</option>
+                <option>Cloud Security</option>
+              </select>
+            </div>
+            <div>
+              <label>Endpoint Type</label>
+              <select name="endpoint_type">
+                <option>Workstation</option>
+                <option>Database Server</option>
+                <option>Cloud VM</option>
+                <option>Laptop</option>
+                <option>Mobile Device</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <label>Process Name</label>
+              <input type="text" name="process_name" placeholder="powershell.exe" />
+            </div>
+            <div>
+              <label>Parent Process</label>
+              <input type="text" name="parent_process" placeholder="explorer.exe" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <label>Authentication Result</label>
+              <input type="text" name="authentication_result" value="N/A" />
+            </div>
+            <div>
+              <label>User Role</label>
+              <input type="text" name="user_role" value="Standard User" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <label>Operating System</label>
+              <select name="operating_system">
+                <option>Windows 10</option>
+                <option>Windows 11</option>
+                <option>Windows Server 2019</option>
+                <option>macOS</option>
+                <option>Linux</option>
+              </select>
+            </div>
+            <div>
+              <label>Department</label>
+              <input type="text" name="department" value="IT" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <label>Endpoint Risk Score (0–100)</label>
+              <input type="number" name="endpoint_risk_score" min="0" max="100" value="50" />
+            </div>
+            <div>
+              <label>User Risk Score (0–100)</label>
+              <input type="number" name="user_risk_score" min="0" max="100" value="50" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <label>Previous Alert Count (this endpoint/user)</label>
+              <input type="number" name="previous_alert_count" min="0" value="0" />
+            </div>
+            <div>
+              <label>Previous Incident Count</label>
+              <input type="number" name="previous_incident_count" min="0" value="0" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <label>Similar Alert Count (historical)</label>
+              <input type="number" name="similar_alert_count" min="0" value="0" />
+            </div>
+            <div>
+              <label>Historical False-Positive Rate (0–1)</label>
+              <input type="number" name="historical_false_positive_rate" min="0" max="1" step="0.01" value="0.5" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <label>Historical Incident Rate (0–1)</label>
+              <input type="number" name="historical_incident_rate" min="0" max="1" step="0.01" value="0.2" />
+            </div>
+          </div>
+
+          <p style="color:var(--text-secondary);font-size:0.78rem;margin:-4px 0 12px;">
+            Tip: leaving optional fields blank is fine — the assistant still works — but an alert
+            missing several fields at once may get a lower-confidence or Novel/Unknown recommendation
+            simply because there's less context to go on. Filling in what you know (especially
+            historical rate fields and process context) gives a sharper recommendation.
+          </p>
+
+          <button type="submit" class="btn btn-primary">🔍 Get AI Recommendation</button>
+        </form>
+
+        <div class="alert-result" id="result-box"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">📦 Bulk CSV Upload</div>
+        <p style="color:var(--text-secondary);font-size:0.9rem;">
+          Represent alerts from multiple disconnected tools (EDR, IAM, Firewall, SIEM, ...) via the
+          <code>alert_source</code> column, and classify them all in one unified workflow.
+        </p>
+        <a href="/upload" class="btn btn-primary" style="margin-top:10px;">Go to Bulk Upload →</a>
+
+        <div style="margin-top:28px;">
+          <div class="section-title" style="font-size:1rem;">Recommendation Categories</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <span class="badge gray"><span class="badge-dot"></span>Likely False Positive</span>
+            <span class="badge red"><span class="badge-dot"></span>Likely True Incident</span>
+            <span class="badge purple"><span class="badge-dot"></span>Novel / Unknown — Human Investigation Required</span>
+          </div>
+        </div>
+
+        <div style="margin-top:24px;">
+          <div class="section-title" style="font-size:1rem;">Human-in-the-Loop Safety</div>
+          <p style="color:var(--text-secondary);font-size:0.85rem;line-height:1.6;">
+            The AI only <em>recommends</em>. It never deletes, suppresses, quarantines, blocks, or
+            closes an alert automatically. High-impact actions (quarantine, block IP, disable user,
+            escalate) always require explicit human confirmation — see the
+            <a href="/audit">Audit Trail</a> for the full record.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-note">False Positive Reduction Assistant · Synthetic data · All high-impact actions are simulated</div>
+  </div>
+
+  {% include "_override_modal.html" %}
+
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+  <script>
+    const form = document.getElementById("alert-form");
+    const resultBox = document.getElementById("result-box");
+    const errorBox = document.getElementById("form-error");
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      submitAlertForm(form, resultBox, errorBox);
+    });
+  </script>
+</body>
+</html>

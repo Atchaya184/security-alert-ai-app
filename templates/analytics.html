@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>False Positive Reduction Assistant — Analytics</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+  {% include "_nav.html" %}
+
+  <div class="container">
+    <div class="page-header">
+      <h1>Analytics &amp; Experiment Results</h1>
+      <p>Live application usage plus the offline, chronologically-evaluated experiment (past alerts → train, future alerts → measured). All numbers below are computed programmatically — none are hard-coded.</p>
+    </div>
+
+    <div class="section-title" style="margin-top:8px;">Live Application Usage</div>
+    <div class="grid grid-4" id="stats-grid">
+      <div class="card stat-card">
+        <div class="stat-label">Total Alerts Processed</div>
+        <div class="stat-value" id="stat-total">—</div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-label">Likely False Positive</div>
+        <div class="stat-value" style="color:var(--gray);" id="stat-fake">—</div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-label">Likely True Incident</div>
+        <div class="stat-value" style="color:var(--red);" id="stat-dangerous">—</div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-label">Novel / Unknown</div>
+        <div class="stat-value" style="color:#b79bff;" id="stat-novel">—</div>
+      </div>
+    </div>
+
+    <div class="grid grid-3" style="margin-top:20px;">
+      <div class="card stat-card">
+        <div class="stat-label">Analyst Overrides</div>
+        <div class="stat-value" id="stat-overrides">—</div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-label">Accepted / Rejected / Pending</div>
+        <div class="stat-value" id="stat-accept-reject" style="font-size:1.3rem;">—</div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-label">Pending Change Reviews</div>
+        <div class="stat-value" id="stat-pending-reviews">—</div>
+      </div>
+    </div>
+
+    <div class="section-title" style="margin-top:36px;">Baseline vs. Assistant — Measured on Chronological Test Split</div>
+    <div class="card" id="experiment-card">
+      <div id="experiment-body">Loading experiment results...</div>
+    </div>
+
+    <div class="section-title" style="margin-top:28px;">Model Performance (Test Split)</div>
+    <div class="card" id="model-perf-card">
+      <div id="model-perf-body">Loading...</div>
+    </div>
+
+    <div class="section-title" style="margin-top:28px;">Novelty Detection</div>
+    <div class="card" id="novelty-card">
+      <div id="novelty-body">Loading...</div>
+    </div>
+
+    <div class="section-title" style="margin-top:28px;">Error Analysis</div>
+    <div class="card" id="error-card">
+      <div id="error-body">Loading...</div>
+    </div>
+
+    <div class="footer-note">False Positive Reduction Assistant · Synthetic data · All high-impact actions are simulated</div>
+  </div>
+
+  <script>
+    function metricRow(label, value, cls) {
+      return `<div class="metric-row"><span>${label}</span><span class="metric-value ${cls || ''}">${value}</span></div>`;
+    }
+
+    async function loadAnalytics() {
+      try {
+        const res = await fetch("/api/analytics");
+        const data = await res.json();
+        const live = data.live || {};
+        const exp = data.experiment;
+        const err = data.error_analysis;
+
+        document.getElementById("stat-total").textContent = live.total ?? 0;
+        document.getElementById("stat-fake").textContent = live.likely_false_positive ?? 0;
+        document.getElementById("stat-dangerous").textContent = live.likely_true_incident ?? 0;
+        document.getElementById("stat-novel").textContent = live.novel ?? 0;
+        document.getElementById("stat-overrides").textContent = live.overrides ?? 0;
+        document.getElementById("stat-accept-reject").textContent = `${live.accepted ?? 0} / ${live.rejected ?? 0} / ${live.pending ?? 0}`;
+        document.getElementById("stat-pending-reviews").textContent = live.pending_change_reviews ?? 0;
+
+        const expBody = document.getElementById("experiment-body");
+        if (!exp) {
+          expBody.innerHTML = '<p class="empty-state">No trained-model metrics found. Run: python model/train_model.py</p>';
+        } else {
+          const b = exp.baseline_vs_assistant;
+          const s = exp.safety_metrics;
+          const f = exp.false_positive_reduction;
+          const targetPass = s.target_achieved;
+          expBody.innerHTML = `
+            <div class="grid grid-2">
+              <div>
+                <div class="section-title" style="font-size:0.95rem;">Analyst Hours (Test Split, n=${exp.row_counts.test} alerts)</div>
+                ${metricRow("Baseline hours (every alert manually investigated)", b.baseline_analyst_hours + " h")}
+                ${metricRow("Assistant hours (only review-required alerts)", b.assistant_analyst_hours + " h")}
+                ${metricRow("Hours saved", b.analyst_hours_saved + " h", "target-pass")}
+                ${metricRow("Percent saved", b.pct_hours_saved + "%", "target-pass")}
+                ${metricRow("Avg investigation time / alert (configurable)", b.avg_investigation_minutes + " min")}
+                ${metricRow("Quick-review time for FP recs (configurable)", b.quick_review_minutes + " min")}
+              </div>
+              <div>
+                <div class="section-title" style="font-size:0.95rem;">Safety: Missed-Incident Rate</div>
+                ${metricRow("Confirmed incidents in test split", s.actual_incidents_in_test)}
+                ${metricRow("Missed incidents (confirmed incident called FP)", s.missed_incidents)}
+                ${metricRow("Measured missed-incident rate", s.missed_incident_rate_pct + "%")}
+                ${metricRow("Target (configurable)", "≤ " + s.missed_incident_target_pct + "%")}
+                ${metricRow("Target achieved", targetPass ? "YES ✓" : "NO ✗", targetPass ? "target-pass" : "target-fail")}
+                <div class="section-title" style="font-size:0.95rem;margin-top:16px;">False-Positive Reduction</div>
+                ${metricRow("Actual false positives in test split", f.actual_false_positives_in_test)}
+                ${metricRow("Correctly flagged for suppression", f.correctly_flagged_false_positives)}
+                ${metricRow("False-positive reduction rate", f.false_positive_reduction_rate_pct + "%")}
+              </div>
+            </div>
+            <p style="color:var(--text-secondary);font-size:0.82rem;margin-top:14px;">
+              Trained ${new Date(exp.trained_at).toLocaleString()} · Model v${exp.model_version} ·
+              BASELINE → TARGET → MEASURED shown above. The safety target (missed incidents) is
+              prioritized over maximizing false-positive reduction, per the assistant's design priority order.
+            </p>`;
+        }
+
+        const perfBody = document.getElementById("model-perf-body");
+        if (exp) {
+          const c = exp.classification;
+          const cm = c.calibrated_operating_point.confusion_matrix;
+          const labels = c.calibrated_operating_point.confusion_matrix_labels;
+          perfBody.innerHTML = `
+            ${metricRow("ROC-AUC (threshold-independent)", c.roc_auc_true_incident)}
+            ${metricRow("Calibrated decision threshold (P(True Incident) ≥ ...)", c.calibrated_operating_point.true_incident_threshold)}
+            ${metricRow("Accuracy at calibrated threshold", (c.calibrated_operating_point.accuracy * 100).toFixed(1) + "%")}
+            <div class="section-title" style="font-size:0.9rem;margin-top:14px;">Confusion Matrix (rows=actual, cols=predicted)</div>
+            <table style="margin-top:8px;"><thead><tr><th></th><th>${labels[0]}</th><th>${labels[1]}</th></tr></thead>
+            <tbody>
+              <tr><td><strong>${labels[0]}</strong></td><td>${cm[0][0]}</td><td>${cm[0][1]}</td></tr>
+              <tr><td><strong>${labels[1]}</strong></td><td>${cm[1][0]}</td><td>${cm[1][1]}</td></tr>
+            </tbody></table>
+            <p style="color:var(--text-secondary);font-size:0.82rem;margin-top:10px;">
+              Note: the calibrated threshold is intentionally tuned low to minimize missed incidents
+              (see Change Review for the threshold-tuning tradeoff), so this accuracy figure differs
+              from a naive 0.5-cutoff accuracy — see model/metrics.json for both.
+            </p>`;
+        } else {
+          perfBody.innerHTML = '<p class="empty-state">No metrics available.</p>';
+        }
+
+        const novBody = document.getElementById("novelty-body");
+        if (exp) {
+          const n = exp.novelty_detection;
+          novBody.innerHTML = `
+            ${metricRow("Novelty threshold in use", n.novelty_threshold_used)}
+            ${metricRow("Test alerts flagged as novelty test cases (held out)", n.n_flagged_as_novelty_test_case)}
+            ${metricRow("Alerts predicted as Novel/Unknown", n.n_predicted_novel)}
+            ${metricRow("Novelty recall on flagged cases", n.novelty_recall_on_flagged_cases != null ? (n.novelty_recall_on_flagged_cases * 100).toFixed(1) + "%" : "N/A")}
+            ${metricRow("Novelty precision on predicted-novel", n.novelty_precision_on_predicted_novel != null ? (n.novelty_precision_on_predicted_novel * 100).toFixed(1) + "%" : "N/A")}
+            <p style="color:var(--text-secondary);font-size:0.8rem;margin-top:10px;">${n.note}</p>`;
+        } else {
+          novBody.innerHTML = '<p class="empty-state">No metrics available.</p>';
+        }
+
+        const errBody = document.getElementById("error-body");
+        if (err) {
+          let html = "";
+          for (const [key, val] of Object.entries(err)) {
+            html += `
+              <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.06);">
+                <div style="display:flex;justify-content:space-between;">
+                  <strong style="font-size:0.9rem;">${key.replace(/_/g, " ")}</strong>
+                  <span>${val.count} (${val.pct_of_test}%)</span>
+                </div>
+                <p style="color:var(--text-secondary);font-size:0.82rem;margin:6px 0;">${val.explanation}</p>
+                ${val.sample_alert_ids && val.sample_alert_ids.length ? `<div class="pill-row">${val.sample_alert_ids.map(id => `<span class="pill">${id}</span>`).join("")}</div>` : ""}
+              </div>`;
+          }
+          errBody.innerHTML = html;
+        } else {
+          errBody.innerHTML = '<p class="empty-state">No error analysis available.</p>';
+        }
+      } catch (err) {
+        console.error("Failed to load analytics", err);
+      }
+    }
+
+    loadAnalytics();
+  </script>
+</body>
+</html>

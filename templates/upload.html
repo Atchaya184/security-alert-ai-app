@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>False Positive Reduction Assistant — Bulk Upload</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+  {% include "_nav.html" %}
+
+  <div class="container">
+    <div class="page-header">
+      <h1>Bulk CSV Alert Upload</h1>
+      <p>Upload a CSV of alerts from disconnected tools to get AI recommendations for each in one batch.</p>
+    </div>
+
+    <div class="card" style="margin-bottom:24px;">
+      <div class="flash-error" id="upload-error"></div>
+      <form id="upload-form">
+        <div class="upload-drop" id="drop-zone">
+          <input type="file" id="file-input" name="file" accept=".csv" style="display:none;" />
+          <div id="drop-label">
+            📁 <strong>Click to select</strong> or drag & drop a CSV file here
+            <div style="color:var(--text-secondary);font-size:0.82rem;margin-top:6px;">
+              Required columns: alert_id, alert_type, severity. Recommended: alert_source, endpoint_risk_score,
+              user_risk_score, previous_alert_count, previous_incident_count, similar_alert_count,
+              historical_false_positive_rate, historical_incident_rate, process_name, country.
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:16px;display:flex;align-items:center;gap:14px;">
+          <button type="submit" class="btn btn-primary">⬆ Upload &amp; Classify</button>
+          <span id="file-name" style="color:var(--text-secondary);font-size:0.85rem;"></span>
+        </div>
+      </form>
+    </div>
+
+    <div class="card" id="results-card" style="display:none;">
+      <div class="section-title">📊 Classification Results</div>
+      <div id="summary-line" style="color:var(--text-secondary);margin-bottom:16px;font-size:0.9rem;"></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Alert ID</th>
+              <th>Recommendation</th>
+              <th>Confidence</th>
+              <th>Recommended Action</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="results-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="footer-note">False Positive Reduction Assistant · Synthetic data · All high-impact actions are simulated</div>
+  </div>
+
+  {% include "_override_modal.html" %}
+
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+  <script>
+    const dropZone = document.getElementById("drop-zone");
+    const fileInput = document.getElementById("file-input");
+    const fileNameEl = document.getElementById("file-name");
+    const uploadForm = document.getElementById("upload-form");
+    const errorBox = document.getElementById("upload-error");
+    const resultsCard = document.getElementById("results-card");
+    const resultsBody = document.getElementById("results-body");
+    const summaryLine = document.getElementById("summary-line");
+
+    dropZone.addEventListener("click", () => fileInput.click());
+    dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("dragover"); });
+    dropZone.addEventListener("dragleave", () => dropZone.classList.remove("dragover"));
+    dropZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropZone.classList.remove("dragover");
+      if (e.dataTransfer.files.length) {
+        fileInput.files = e.dataTransfer.files;
+        fileNameEl.textContent = fileInput.files[0].name;
+      }
+    });
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files.length) fileNameEl.textContent = fileInput.files[0].name;
+    });
+
+    uploadForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      hideError(errorBox);
+      resultsCard.style.display = "none";
+
+      if (!fileInput.files.length) {
+        showError(errorBox, "Please select a CSV file first.");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", fileInput.files[0]);
+
+      const submitBtn = uploadForm.querySelector("button[type='submit']");
+      const originalText = submitBtn.innerHTML;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="spinner"></span> Processing...';
+
+      try {
+        const res = await fetch("/upload", { method: "POST", body: formData });
+        const data = await res.json();
+
+        if (!res.ok) {
+          showError(errorBox, data.error || "Upload failed.");
+          return;
+        }
+
+        summaryLine.textContent = `Processed ${data.processed} alert(s). ${data.failed} failed.`;
+        resultsBody.innerHTML = "";
+
+        data.results.forEach((r) => {
+          const tr = document.createElement("tr");
+          const actionLabel = r.is_high_impact_action
+            ? `${r.recommended_action} <span class="badge amber" style="margin-left:6px;"><span class="badge-dot"></span>Needs confirmation</span>`
+            : r.recommended_action;
+          tr.innerHTML = `
+            <td>${r.alert_id}</td>
+            <td><span class="badge ${r.color}"><span class="badge-dot"></span>${shortRecLabel(r.recommendation)}</span></td>
+            <td>${r.confidence}%</td>
+            <td style="max-width:260px;">${actionLabel}</td>
+            <td>
+              <div class="action-group">
+                <button class="btn btn-accept btn-sm" onclick="sendDecision(${r.id}, 'Accept', this)">Accept</button>
+                <button class="btn btn-reject btn-sm" onclick="sendDecision(${r.id}, 'Reject', this)">Reject</button>
+                <button class="btn btn-override btn-sm" onclick="openOverrideModal(${r.id})">Override</button>
+                <a class="btn btn-rollback btn-sm" href="/investigation/${r.id}">Investigate</a>
+              </div>
+            </td>`;
+          resultsBody.appendChild(tr);
+        });
+
+        resultsCard.style.display = "block";
+      } catch (err) {
+        showError(errorBox, "Network error: could not reach the server.");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      }
+    });
+  </script>
+</body>
+</html>

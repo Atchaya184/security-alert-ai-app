@@ -1,0 +1,12 @@
+alert_id,endpoint_risk_score,user_risk_score,previous_incident_count,similar_alert_count,severity,alert_type,system_decision,confidence,analyst_decision,override,override_reason,timestamp,event_type,version_type,target_version,restored_version,reviewer
+ALT-10001,91,78,2,1,High,Malware Detection,LIKELY TRUE INCIDENT,0.6006,Pending,no,,2026-09-05T09:45:30.850249+00:00,alert_scored,,,,
+ALT-10002,88,84,3,0,High,Data Exfiltration,LIKELY TRUE INCIDENT,0.6206,Pending,no,,2026-09-05T09:45:31.020307+00:00,alert_scored,,,,
+ALT-10003,76,71,1,2,High,Unauthorized Access,LIKELY TRUE INCIDENT,0.6656,Pending,no,,2026-09-05T09:45:31.186301+00:00,alert_scored,,,,
+ALT-10004,82,65,2,1,High,Suspicious PowerShell Activity,LIKELY TRUE INCIDENT,0.4618,Pending,no,,2026-09-05T09:45:31.318336+00:00,alert_scored,,,,
+ALT-10005,18,12,0,14,Low,Multiple Failed Logins,LIKELY FALSE POSITIVE,0.85,Pending,no,,2026-09-05T09:45:31.466944+00:00,alert_scored,,,,
+ALT-10006,24,19,0,9,Low,Suspicious PowerShell Activity,LIKELY FALSE POSITIVE,0.85,Pending,no,,2026-09-05T09:45:31.615957+00:00,alert_scored,,,,
+ALT-10007,22,25,0,11,Low,Malware Detection,LIKELY FALSE POSITIVE,0.85,Pending,no,,2026-09-05T09:45:32.126962+00:00,alert_scored,,,,
+ALT-10008,48,44,0,0,Medium,Unauthorized Access,LIKELY TRUE INCIDENT,0.5028,Pending,no,,2026-09-05T09:45:32.320987+00:00,alert_scored,,,,
+ALT-10009,56,52,0,0,Medium,Data Exfiltration,LIKELY TRUE INCIDENT,0.5588,Pending,no,,2026-09-05T09:45:32.463078+00:00,alert_scored,,,,
+ALT-10010,63,58,1,4,Medium,Multiple Failed Logins,LIKELY TRUE INCIDENT,0.443,Pending,no,,2026-09-05T09:45:32.620092+00:00,alert_scored,,,,
+,,,,,,,,,Rollback (rule): -> v1.0-restored,no,Testing Rollback after approved rule change,2026-09-05T10:11:37.932398+00:00,version_rollback,rule,1.0,1.0-restored,Analyst

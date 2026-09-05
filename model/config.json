@@ -1,0 +1,21 @@
+{
+  "model_version": "1.0",
+  "rule_version": "1.0",
+  "novelty_threshold": 0.99,
+  "similar_alert_count_threshold": 1,
+  "avg_investigation_minutes": 5.0,
+  "quick_review_minutes": 0.5,
+  "missed_incident_target_pct": 2.0,
+  "high_risk_endpoint_threshold": 70,
+  "high_risk_user_threshold": 60,
+  "high_risk_previous_incident_threshold": 1,
+  "fake_similar_alert_count_threshold": 5,
+  "low_confidence_threshold": 0.6,
+  "strong_fp_endpoint_risk_max": 30,
+  "strong_fp_user_risk_max": 30,
+  "strong_fp_previous_incident_max": 0,
+  "strong_fp_similar_alert_count_min": 5,
+  "strong_fp_historical_fp_rate_min": 0.7,
+  "strong_fp_confidence": 0.85,
+  "true_incident_threshold": 0.08
+}

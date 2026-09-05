@@ -1,0 +1,20 @@
+<div class="modal-overlay" id="override-modal">
+  <div class="modal-box">
+    <h3>Override AI Recommendation</h3>
+    <div class="flash-error" id="override-error"></div>
+    <label>Override Decision</label>
+    <select id="override-decision-select">
+      <option>Likely False Positive</option>
+      <option>Likely True Incident</option>
+      <option>Novel / Human Investigation</option>
+    </select>
+    <div style="margin-top:14px;">
+      <label>Override Reason (required)</label>
+      <textarea id="override-reason-input" rows="3" placeholder="Explain why you disagree with the AI recommendation..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-override btn-sm" onclick="closeOverrideModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="submitOverride()">Submit Override</button>
+    </div>
+  </div>
+</div>

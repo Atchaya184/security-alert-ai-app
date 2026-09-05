@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Investigation — Alert #{{ alert.id }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+  {% include "_nav.html" %}
+
+  <div class="container">
+    <div class="page-header">
+      <h1>Investigation — Alert #{{ alert.id }} ({{ alert.alert_id }})</h1>
+      <p>Complete review workflow: alert details, context, AI recommendation, evidence, and human decision.</p>
+    </div>
+
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="section-title">📋 Alert Details</div>
+        <div class="info-grid">
+          <div class="info-item"><div class="label">Alert Type</div><div class="value">{{ alert.alert_type }}</div></div>
+          <div class="info-item"><div class="label">Source Tool</div><div class="value">{{ alert.alert_source }}</div></div>
+          <div class="info-item"><div class="label">Severity</div><div class="value">{{ alert.severity }}</div></div>
+          <div class="info-item"><div class="label">Timestamp</div><div class="value">{{ alert.timestamp or "Unknown" }}</div></div>
+          <div class="info-item"><div class="label">Source IP</div><div class="value">{{ alert.source_ip or "—" }}</div></div>
+          <div class="info-item"><div class="label">Destination IP</div><div class="value">{{ alert.destination_ip or "—" }}</div></div>
+          <div class="info-item"><div class="label">Location</div><div class="value">{{ alert.location or "—" }}</div></div>
+          <div class="info-item"><div class="label">Device</div><div class="value">{{ alert.device or "—" }}</div></div>
+        </div>
+
+        <div class="section-title" style="font-size:0.95rem;margin-top:20px;">Endpoint / Historical Context</div>
+        <div class="info-grid">
+          <div class="info-item"><div class="label">Endpoint Risk Score</div><div class="value">{{ alert.raw.get('endpoint_risk_score', '—') }}</div></div>
+          <div class="info-item"><div class="label">User Risk Score</div><div class="value">{{ alert.raw.get('user_risk_score', '—') }}</div></div>
+          <div class="info-item"><div class="label">Previous Alert Count</div><div class="value">{{ alert.raw.get('previous_alert_count', '—') }}</div></div>
+          <div class="info-item"><div class="label">Previous Incident Count</div><div class="value">{{ alert.raw.get('previous_incident_count', '—') }}</div></div>
+          <div class="info-item"><div class="label">Similar Alert Count</div><div class="value">{{ alert.raw.get('similar_alert_count', '—') }}</div></div>
+          <div class="info-item"><div class="label">Process / Parent</div><div class="value">{{ alert.raw.get('process_name', '—') }} / {{ alert.raw.get('parent_process', '—') }}</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">🤖 AI Recommendation</div>
+        <div style="margin-bottom:8px;">
+          <span class="badge {{ 'red' if alert.ai_recommendation == 'LIKELY TRUE INCIDENT' else ('purple' if 'NOVEL' in alert.ai_recommendation else 'gray') }}">
+            <span class="badge-dot"></span>{{ alert.ai_recommendation }}
+          </span>
+          {% if alert.risk_level %}
+          <span class="badge {{ 'red' if alert.risk_level == 'High' else ('amber' if alert.risk_level == 'Medium' else 'green') }}">
+            <span class="badge-dot"></span>Risk: {{ alert.risk_level }}
+          </span>
+          {% endif %}
+        </div>
+        <div style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);">
+          Recommendation: {{ alert.simple_label or ('Escalate' if alert.ai_recommendation == 'LIKELY TRUE INCIDENT' else ('Fake' if alert.ai_recommendation == 'LIKELY FALSE POSITIVE' else 'Investigate')) }}
+        </div>
+        <div style="margin-top:10px;color:var(--text-secondary);font-size:0.88rem;">
+          Confidence: {{ (alert.confidence * 100) | round(1) }}%{% if alert.low_confidence %} ⚠{% endif %} · Novelty score: {{ alert.novelty_score | round(2) }} ·
+          Model v{{ alert.model_version }} / Rule v{{ alert.rule_version }}
+        </div>
+        {% if alert.rule_triggered %}
+        <div style="color:var(--text-secondary);font-size:0.75rem;margin-top:2px;font-family:monospace;">Rule: {{ alert.rule_triggered }}</div>
+        {% endif %}
+
+        {% if alert.high_risk_gate_triggered %}
+        <div class="high-impact-banner" style="border-color: rgba(255, 92, 114, 0.4); background: rgba(255, 92, 114, 0.08);">
+          <div class="title" style="color: var(--red);">⚠ High-risk alert — manual confirmation required</div>
+          <div style="font-size:0.85rem;color:var(--text-secondary);">Quick Accept is disabled for this alert. Choose Reject, or Override with a documented reason.</div>
+        </div>
+        {% endif %}
+        {% if alert.low_confidence %}
+        <div class="high-impact-banner" style="border-color: rgba(255, 193, 7, 0.4); background: rgba(255, 193, 7, 0.08);">
+          <div class="title">⚠ Low confidence prediction</div>
+          <div style="font-size:0.85rem;color:var(--text-secondary);">Confidence is below the reliability threshold — verify this recommendation manually before acting on it.</div>
+        </div>
+        {% endif %}
+
+        <div class="section-title" style="font-size:0.95rem;margin-top:18px;">Evidence</div>
+        <ul class="evidence-list">
+          {% for e in alert.evidence %}
+          <li>{{ e }}</li>
+          {% endfor %}
+        </ul>
+
+        <div class="section-title" style="font-size:0.95rem;margin-top:18px;">Recommended Action (simulated only)</div>
+        <p style="color:var(--text-secondary);font-size:0.9rem;">{{ alert.recommended_action }}</p>
+
+        {% if alert.is_high_impact_action %}
+        <div class="high-impact-banner">
+          <div class="title">⚠ HIGH-IMPACT ACTION</div>
+          <div style="font-size:0.9rem;">Recommended Action: <strong>{{ alert.recommended_action }}</strong></div>
+          <div style="font-size:0.82rem;color:var(--text-secondary);margin-top:4px;">
+            Current confirmation status: <strong>{{ alert.human_confirmation }}</strong>. Nothing is executed automatically.
+          </div>
+          {% if alert.human_confirmation == 'Required' or alert.human_confirmation == 'Pending' %}
+          <div class="action-group" style="margin-top:10px;">
+            <button class="btn btn-accept btn-sm" onclick="confirmAction({{ alert.id }}, 'Approved', this)">Approve</button>
+            <button class="btn btn-reject btn-sm" onclick="confirmAction({{ alert.id }}, 'Rejected', this)">Reject</button>
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="grid grid-2" style="margin-top:20px;">
+      <div class="card">
+        <div class="section-title">👤 Human Decision</div>
+        <p style="color:var(--text-secondary);font-size:0.88rem;">Current decision: <strong>{{ alert.analyst_decision }}</strong></p>
+        {% if alert.override_status %}
+        <p style="color:var(--text-secondary);font-size:0.85rem;">Override decision: <strong>{{ alert.override_decision }}</strong></p>
+        <p style="color:var(--text-secondary);font-size:0.85rem;">Override reason: {{ alert.override_reason }}</p>
+        {% endif %}
+        <div class="action-group" style="margin-top:14px;">
+          <button class="btn btn-accept btn-sm" {{ 'disabled title="High-risk alert — manual confirmation required. Use Reject or Override."' if alert.high_risk_gate_triggered else '' }} onclick="sendDecision({{ alert.id }}, 'Accept', this)">Accept</button>
+          <button class="btn btn-reject btn-sm" onclick="sendDecision({{ alert.id }}, 'Reject', this)">Reject</button>
+          <button class="btn btn-override btn-sm" onclick="openOverrideModal({{ alert.id }})">Override</button>
+          <button class="btn btn-rollback btn-sm" onclick="rollbackDecision({{ alert.id }}, this)">Rollback</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">🕓 Audit Information</div>
+        {% for h in history %}
+        <div class="timeline-item">
+          <div style="font-size:0.85rem;"><strong>{{ h.event_type }}</strong>: {{ h.decision }}</div>
+          {% if h.override_reason %}<div style="font-size:0.8rem;color:var(--text-secondary);">Reason: {{ h.override_reason }}</div>{% endif %}
+          <div style="font-size:0.76rem;color:var(--text-secondary);">{{ h.changed_at }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="footer-note">False Positive Reduction Assistant · Synthetic data · All high-impact actions are simulated</div>
+  </div>
+
+  {% include "_override_modal.html" %}
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

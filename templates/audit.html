@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>False Positive Reduction Assistant — Audit Trail</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+  {% include "_nav.html" %}
+
+  <div class="container">
+    <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;">
+      <div>
+        <h1>Audit Trail</h1>
+        <p>Every alert, AI recommendation, evidence, analyst decision, override reason, and human confirmation — fully tracked. Nothing is ever deleted.</p>
+      </div>
+      <a class="btn btn-primary btn-sm" href="/audit/export" download>⬇ Download audit_log.csv</a>
+    </div>
+
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Alert ID</th>
+              <th>Source</th>
+              <th>Recommendation</th>
+              <th>Risk</th>
+              <th>Confidence</th>
+              <th>Novelty</th>
+              <th>Analyst Decision</th>
+              <th>Override Reason</th>
+              <th>High-Impact Confirm</th>
+              <th>Model / Rule</th>
+              <th>Created</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="audit-body">
+            <tr><td colspan="13" class="empty-state">Loading audit records...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section-title" style="margin-top:30px;">Rollback Events (Model / Rule)</div>
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Type</th>
+              <th>Target Version</th>
+              <th>Restored Version</th>
+              <th>Reason</th>
+              <th>Reviewer</th>
+              <th>Timestamp</th>
+            </tr>
+          </thead>
+          <tbody id="rollback-audit-body">
+            <tr><td colspan="7" class="empty-state">Loading rollback events...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="footer-note">False Positive Reduction Assistant · Synthetic data · All high-impact actions are simulated</div>
+  </div>
+
+  {% include "_override_modal.html" %}
+
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+  <script>
+    async function loadAudit() {
+      const tbody = document.getElementById("audit-body");
+      try {
+        const res = await fetch("/api/audit");
+        const data = await res.json();
+        const alerts = data.alerts || [];
+
+        if (alerts.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="13" class="empty-state">No alerts recorded yet. Classify one from the Dashboard to see it here.</td></tr>';
+        } else {
+        tbody.innerHTML = "";
+        alerts.forEach((a) => {
+          const color = colorForRecommendation(a.ai_recommendation);
+          const overrideText = a.override_status ? `${a.override_decision || ""}: ${a.override_reason || ""}` : "—";
+          const confirmBadge = a.human_confirmation === "Approved" ? "green"
+            : a.human_confirmation === "Rejected" ? "red"
+            : a.human_confirmation === "Pending" ? "amber" : "gray";
+          const riskColor = colorForRisk(a.risk_level);
+          const riskCell = a.risk_level
+            ? `<span class="badge ${riskColor}"><span class="badge-dot"></span>${a.risk_level}</span>`
+            : "—";
+          const acceptDisabled = a.high_risk_gate_triggered ? "disabled title=\"High-risk alert — manual confirmation required. Use Override or the Investigation page.\"" : "";
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td><a href="/investigation/${a.id}">${a.id}</a></td>
+            <td>${a.alert_id || "—"}</td>
+            <td>${a.alert_source || "—"}</td>
+            <td><span class="badge ${color}"><span class="badge-dot"></span>${shortRecLabel(a.ai_recommendation)} (${a.simple_label || simpleLabelFor(a.ai_recommendation)})</span></td>
+            <td>${riskCell}</td>
+            <td>${(a.confidence * 100).toFixed(1)}%${a.low_confidence ? ' <span class="badge amber" title="Low confidence prediction">⚠ Low</span>' : ""}</td>
+            <td>${(a.novelty_score ?? 0).toFixed(2)}</td>
+            <td>${a.analyst_decision}</td>
+            <td style="max-width:220px;font-size:0.8rem;">${overrideText}</td>
+            <td><span class="badge ${confirmBadge}"><span class="badge-dot"></span>${a.human_confirmation}</span></td>
+            <td style="font-size:0.78rem;">v${a.model_version} / v${a.rule_version}</td>
+            <td>${new Date(a.created_at).toLocaleString()}</td>
+            <td>
+              <div class="action-group">
+                <button class="btn btn-accept btn-sm" ${acceptDisabled} onclick="sendDecision(${a.id}, 'Accept', this)">Accept</button>
+                <button class="btn btn-reject btn-sm" onclick="sendDecision(${a.id}, 'Reject', this)">Reject</button>
+                <button class="btn btn-override btn-sm" onclick="openOverrideModal(${a.id})">Override</button>
+                <button class="btn btn-rollback btn-sm" onclick="rollbackDecision(${a.id}, this)">Rollback</button>
+              </div>
+            </td>`;
+          tbody.appendChild(tr);
+        });
+        }
+
+        const rollbackEvents = data.rollback_events || [];
+        const rbBody = document.getElementById("rollback-audit-body");
+        if (rollbackEvents.length === 0) {
+          rbBody.innerHTML = '<tr><td colspan="7" class="empty-state">No rollback events recorded yet.</td></tr>';
+        } else {
+          rbBody.innerHTML = "";
+          rollbackEvents.forEach((r) => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td>${r.id}</td>
+              <td>${r.version_type}</td>
+              <td>v${r.target_label}</td>
+              <td>v${r.restored_version}</td>
+              <td style="max-width:260px;font-size:0.8rem;">${r.reason}</td>
+              <td>${r.reviewer}</td>
+              <td>${new Date(r.created_at).toLocaleString()}</td>`;
+            rbBody.appendChild(tr);
+          });
+        }
+      } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="13" class="empty-state">Failed to load audit trail.</td></tr>';
+      }
+    }
+
+    loadAudit();
+  </script>
+</body>
+</html>

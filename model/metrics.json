@@ -1,0 +1,321 @@
+{
+  "trained_at": "2026-09-05T09:36:37.351825+00:00",
+  "trigger": "analyst_feedback_retrain",
+  "model_version": "1.1",
+  "rule_version": "1.0",
+  "dataset_path": "/home/claude/project/security-alert-ai-app/dataset/security_alerts_2000.csv",
+  "threshold_calibration": {
+    "note": "True-Incident decision threshold calibrated on the VALIDATION split (never on test) to minimize missed incidents relative to the safety target.",
+    "candidates": [
+      {
+        "threshold": 0.02,
+        "val_missed_incident_rate_pct": 0.0,
+        "val_false_positive_reduction_pct": 0.461
+      },
+      {
+        "threshold": 0.04,
+        "val_missed_incident_rate_pct": 0.0,
+        "val_false_positive_reduction_pct": 0.461
+      },
+      {
+        "threshold": 0.06,
+        "val_missed_incident_rate_pct": 0.0,
+        "val_false_positive_reduction_pct": 0.922
+      },
+      {
+        "threshold": 0.08,
+        "val_missed_incident_rate_pct": 1.205,
+        "val_false_positive_reduction_pct": 3.226
+      },
+      {
+        "threshold": 0.1,
+        "val_missed_incident_rate_pct": 2.41,
+        "val_false_positive_reduction_pct": 4.147
+      },
+      {
+        "threshold": 0.12,
+        "val_missed_incident_rate_pct": 3.614,
+        "val_false_positive_reduction_pct": 7.373
+      },
+      {
+        "threshold": 0.14,
+        "val_missed_incident_rate_pct": 3.614,
+        "val_false_positive_reduction_pct": 9.217
+      },
+      {
+        "threshold": 0.16,
+        "val_missed_incident_rate_pct": 3.614,
+        "val_false_positive_reduction_pct": 10.599
+      },
+      {
+        "threshold": 0.18,
+        "val_missed_incident_rate_pct": 4.819,
+        "val_false_positive_reduction_pct": 11.521
+      },
+      {
+        "threshold": 0.2,
+        "val_missed_incident_rate_pct": 6.024,
+        "val_false_positive_reduction_pct": 12.442
+      },
+      {
+        "threshold": 0.22,
+        "val_missed_incident_rate_pct": 6.024,
+        "val_false_positive_reduction_pct": 15.207
+      },
+      {
+        "threshold": 0.24,
+        "val_missed_incident_rate_pct": 8.434,
+        "val_false_positive_reduction_pct": 16.59
+      },
+      {
+        "threshold": 0.26,
+        "val_missed_incident_rate_pct": 9.639,
+        "val_false_positive_reduction_pct": 17.512
+      },
+      {
+        "threshold": 0.28,
+        "val_missed_incident_rate_pct": 10.843,
+        "val_false_positive_reduction_pct": 17.512
+      },
+      {
+        "threshold": 0.3,
+        "val_missed_incident_rate_pct": 10.843,
+        "val_false_positive_reduction_pct": 18.433
+      },
+      {
+        "threshold": 0.32,
+        "val_missed_incident_rate_pct": 12.048,
+        "val_false_positive_reduction_pct": 18.894
+      },
+      {
+        "threshold": 0.34,
+        "val_missed_incident_rate_pct": 12.048,
+        "val_false_positive_reduction_pct": 20.276
+      },
+      {
+        "threshold": 0.36,
+        "val_missed_incident_rate_pct": 13.253,
+        "val_false_positive_reduction_pct": 20.276
+      },
+      {
+        "threshold": 0.38,
+        "val_missed_incident_rate_pct": 14.458,
+        "val_false_positive_reduction_pct": 20.737
+      },
+      {
+        "threshold": 0.4,
+        "val_missed_incident_rate_pct": 14.458,
+        "val_false_positive_reduction_pct": 21.198
+      },
+      {
+        "threshold": 0.42,
+        "val_missed_incident_rate_pct": 14.458,
+        "val_false_positive_reduction_pct": 22.12
+      },
+      {
+        "threshold": 0.44,
+        "val_missed_incident_rate_pct": 15.663,
+        "val_false_positive_reduction_pct": 22.12
+      },
+      {
+        "threshold": 0.46,
+        "val_missed_incident_rate_pct": 15.663,
+        "val_false_positive_reduction_pct": 23.041
+      },
+      {
+        "threshold": 0.48,
+        "val_missed_incident_rate_pct": 15.663,
+        "val_false_positive_reduction_pct": 23.041
+      },
+      {
+        "threshold": 0.5,
+        "val_missed_incident_rate_pct": 16.867,
+        "val_false_positive_reduction_pct": 23.041
+      },
+      {
+        "threshold": 0.52,
+        "val_missed_incident_rate_pct": 16.867,
+        "val_false_positive_reduction_pct": 23.502
+      },
+      {
+        "threshold": 0.54,
+        "val_missed_incident_rate_pct": 18.072,
+        "val_false_positive_reduction_pct": 23.963
+      }
+    ],
+    "selected_threshold": 0.08
+  },
+  "row_counts": {
+    "total": 2000,
+    "train": 1400,
+    "validation": 300,
+    "test": 300,
+    "analyst_feedback_rows_included": 0
+  },
+  "classification": {
+    "classes": [
+      "False Positive",
+      "True Incident"
+    ],
+    "roc_auc_true_incident": 0.7461,
+    "roc_auc_note": "Threshold-independent ranking quality (0.5 = random, 1.0 = perfect). Not affected by the safety-threshold calibration below.",
+    "uncalibrated_0.5_threshold": {
+      "accuracy": 0.7533,
+      "confusion_matrix": [
+        [
+          188,
+          22
+        ],
+        [
+          52,
+          38
+        ]
+      ],
+      "note": "Reference performance at a naive 0.5 probability cutoff, shown for comparison against the safety-calibrated operating point actually used."
+    },
+    "calibrated_operating_point": {
+      "true_incident_threshold": 0.08,
+      "accuracy": 0.3533,
+      "precision": {
+        "False Positive": 0.9444,
+        "True Incident": 0.3156
+      },
+      "recall": {
+        "False Positive": 0.081,
+        "True Incident": 0.9889
+      },
+      "f1_score": {
+        "False Positive": 0.1491,
+        "True Incident": 0.4785
+      },
+      "support": {
+        "False Positive": 210,
+        "True Incident": 90
+      },
+      "confusion_matrix": [
+        [
+          17,
+          193
+        ],
+        [
+          1,
+          89
+        ]
+      ],
+      "confusion_matrix_labels": [
+        "False Positive",
+        "True Incident"
+      ],
+      "full_report": {
+        "False Positive": {
+          "precision": 0.9444444444444444,
+          "recall": 0.08095238095238096,
+          "f1-score": 0.14912280701754385,
+          "support": 210.0
+        },
+        "True Incident": {
+          "precision": 0.31560283687943264,
+          "recall": 0.9888888888888889,
+          "f1-score": 0.478494623655914,
+          "support": 90.0
+        },
+        "accuracy": 0.35333333333333333,
+        "macro avg": {
+          "precision": 0.6300236406619385,
+          "recall": 0.5349206349206349,
+          "f1-score": 0.31380871533672894,
+          "support": 300.0
+        },
+        "weighted avg": {
+          "precision": 0.7557919621749408,
+          "recall": 0.35333333333333333,
+          "f1-score": 0.24793435200905486,
+          "support": 300.0
+        }
+      }
+    }
+  },
+  "novelty_detection": {
+    "n_test_rows": 300,
+    "n_flagged_as_novelty_test_case": 49,
+    "n_predicted_novel": 4,
+    "novelty_recall_on_flagged_cases": 0.0,
+    "novelty_precision_on_predicted_novel": 0.0,
+    "novelty_threshold_used": 0.65,
+    "note": "novelty_test_flag was used ONLY for this evaluation, never as a model input feature."
+  },
+  "safety_metrics": {
+    "actual_incidents_in_test": 90,
+    "missed_incidents": 0,
+    "missed_incident_rate_pct": 0.0,
+    "missed_incident_target_pct": 2.0,
+    "target_achieved": true,
+    "missed_incident_sample_alert_ids": []
+  },
+  "false_positive_reduction": {
+    "actual_false_positives_in_test": 210,
+    "correctly_flagged_false_positives": 5,
+    "false_positive_reduction_rate_pct": 2.381
+  },
+  "baseline_vs_assistant": {
+    "avg_investigation_minutes": 5.0,
+    "quick_review_minutes": 0.5,
+    "total_test_alerts": 300,
+    "alerts_requiring_human_investigation": 295,
+    "alerts_recommended_false_positive": 5,
+    "baseline_analyst_hours": 25.0,
+    "assistant_analyst_hours": 24.625,
+    "analyst_hours_saved": 0.375,
+    "pct_hours_saved": 1.5
+  },
+  "error_analysis": {
+    "false_positive_called_incident": {
+      "count": 204,
+      "pct_of_test": 68.0,
+      "sample_alert_ids": [
+        "A01701",
+        "A01702",
+        "A01703",
+        "A01708",
+        "A01709"
+      ],
+      "explanation": "Actual false positives that the classifier scored as a true incident (analyst time is wasted, but no incident is missed)."
+    },
+    "incident_called_false_positive_missed": {
+      "count": 0,
+      "pct_of_test": 0.0,
+      "sample_alert_ids": [],
+      "explanation": "MISSED INCIDENTS: confirmed true incidents recommended as a false positive suppression. This is the critical safety metric to minimize."
+    },
+    "novel_but_was_false_positive": {
+      "count": 1,
+      "pct_of_test": 0.33,
+      "sample_alert_ids": [
+        "A01733"
+      ],
+      "explanation": "Flagged NOVEL/UNKNOWN by the safety gate but turned out to be a false positive. Costs analyst time but is a safe, intentional trade-off."
+    },
+    "novel_but_was_incident": {
+      "count": 3,
+      "pct_of_test": 1.0,
+      "sample_alert_ids": [
+        "A01706",
+        "A01894",
+        "A01999"
+      ],
+      "explanation": "Flagged NOVEL/UNKNOWN and turned out to be a genuine incident \u2014 exactly the case the novelty safety gate exists to protect against."
+    },
+    "low_confidence_predictions": {
+      "count": 234,
+      "pct_of_test": 78.0,
+      "sample_alert_ids": [
+        "A01701",
+        "A01702",
+        "A01703",
+        "A01705",
+        "A01707"
+      ],
+      "explanation": "Recommendations made with confidence below 0.60 \u2014 worth extra analyst attention even if the recommendation label happens to be correct."
+    }
+  }
+}
